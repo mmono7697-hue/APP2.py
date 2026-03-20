@@ -1,16 +1,12 @@
 """
-MI ASISTENTE IA - VERSIÓN WEB
-Funciona en celular y computador
+MI ASISTENTE IA - VERSIÓN WEB (CORREGIDA)
+Funciona sin google.colab
 """
 
 import streamlit as st
-import pandas as pd
 import matplotlib.pyplot as plt
-from datetime import datetime
-import google.generativeai as genai
-from googleapiclient.discovery import build
-from google.colab import auth
 import io
+from datetime import datetime
 
 # ============================================
 # CONFIGURACIÓN DE LA PÁGINA
@@ -22,110 +18,52 @@ st.set_page_config(
 )
 
 # ============================================
-# INICIALIZAR VARIABLES
-# ============================================
-if 'mensajes' not in st.session_state:
-    st.session_state.mensajes = []
-if 'drive_conectado' not in st.session_state:
-    st.session_state.drive_conectado = False
-if 'gemini_listo' not in st.session_state:
-    st.session_state.gemini_listo = False
-
-# ============================================
-# BARRA LATERAL (donde cada usuario se conecta)
-# ============================================
-with st.sidebar:
-    st.image("https://img.icons8.com/fluency/96/000000/robot-2.png", width=80)
-    st.title("⚙️ CONFIGURACIÓN")
-    
-    st.markdown("---")
-    st.subheader("🤖 1. Conectar Gemini (IA)")
-    
-    # Cada usuario pone su propia API Key
-    api_key = st.text_input(
-        "Tu API Key de Gemini:",
-        type="password",
-        placeholder="Ej: AIzaSyD1234567890..."
-    )
-    
-    if api_key:
-        try:
-            genai.configure(api_key=api_key)
-            st.session_state.modelo = genai.GenerativeModel('gemini-1.5-flash')
-            st.session_state.gemini_listo = True
-            st.success("✅ Gemini conectado")
-        except:
-            st.error("❌ API Key inválida")
-    else:
-        st.warning("⚠️ Necesitas una API Key")
-        st.caption("📌 Cómo obtenerla: aistudio.google.com → Get API Key")
-    
-    st.markdown("---")
-    st.subheader("📁 2. Conectar Google Drive")
-    
-    if st.button("🔑 Conectar mi Drive", use_container_width=True):
-        try:
-            auth.authenticate_user()
-            st.session_state.drive = build('drive', 'v3')
-            st.session_state.docs = build('docs', 'v1')
-            st.session_state.slides = build('slides', 'v1')
-            st.session_state.drive_conectado = True
-            st.success("✅ Drive conectado")
-        except Exception as e:
-            st.error(f"Error: {e}")
-    
-    if st.session_state.drive_conectado:
-        st.info("📁 Drive: Conectado")
-    else:
-        st.warning("📁 Drive: No conectado")
-    
-    st.markdown("---")
-    st.caption("👥 Comparte esta URL con hasta 3 usuarios")
-    st.caption("Cada usuario usa sus propias credenciales")
-
-# ============================================
-# TÍTULO PRINCIPAL
+# TÍTULO
 # ============================================
 st.title("🤖 Mi Asistente IA Personal")
 st.markdown("---")
 
 # ============================================
-# FUNCIÓN PARA RESPONDER
+# INICIALIZAR VARIABLES
 # ============================================
-def responder(pregunta):
-    if not st.session_state.gemini_listo:
-        return "⚠️ Primero conecta Gemini en la barra lateral (pon tu API Key)"
-    
-    prompt = f"""
-    Eres un asistente personal útil y amigable.
-    
-    Pregunta: {pregunta}
-    
-    Responde de manera clara y útil.
-    """
-    
-    try:
-        respuesta = st.session_state.modelo.generate_content(prompt)
-        return respuesta.text
-    except Exception as e:
-        return f"Error: {e}"
+if 'mensajes' not in st.session_state:
+    st.session_state.mensajes = []
 
 # ============================================
-# CREAR GRÁFICA
+# BARRA LATERAL
+# ============================================
+with st.sidebar:
+    st.image("https://img.icons8.com/fluency/96/000000/robot-2.png", width=80)
+    st.title("⚙️ Configuración")
+    
+    st.markdown("---")
+    st.info("📌 **Cómo usar:**")
+    st.write("1. Escribe tu pregunta en el chat")
+    st.write("2. Crea gráficas en la pestaña Gráficas")
+    st.write("3. Comparte esta URL con otros")
+    
+    st.markdown("---")
+    st.caption(f"🕒 {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    st.caption("👥 Compatible con celular y computador")
+
+# ============================================
+# FUNCIÓN PARA CREAR GRÁFICA
 # ============================================
 def crear_grafica(datos, tipo, titulo):
     plt.figure(figsize=(10, 6))
     
     if tipo == "Barras":
-        plt.bar(datos.keys(), datos.values(), color='skyblue')
+        plt.bar(datos.keys(), datos.values(), color='skyblue', edgecolor='navy')
+        plt.grid(True, alpha=0.3, axis='y')
     elif tipo == "Líneas":
-        plt.plot(list(datos.keys()), list(datos.values()), marker='o')
+        plt.plot(list(datos.keys()), list(datos.values()), marker='o', linewidth=2, markersize=8, color='green')
+        plt.grid(True, alpha=0.3)
     elif tipo == "Pastel":
-        plt.pie(datos.values(), labels=datos.keys(), autopct='%1.1f%%')
+        plt.pie(datos.values(), labels=datos.keys(), autopct='%1.1f%%', colors=['#ff9999','#66b3ff','#99ff99','#ffcc99'])
     
-    plt.title(titulo)
-    plt.grid(True, alpha=0.3)
+    plt.title(titulo, fontsize=14, fontweight='bold')
     
+    # Guardar en memoria
     buf = io.BytesIO()
     plt.savefig(buf, format='png', dpi=300, bbox_inches='tight')
     buf.seek(0)
@@ -136,7 +74,7 @@ def crear_grafica(datos, tipo, titulo):
 # ============================================
 # PESTAÑAS
 # ============================================
-tab1, tab2, tab3 = st.tabs(["💬 CHAT", "📊 GRÁFICAS", "📁 DRIVE"])
+tab1, tab2 = st.tabs(["💬 CHAT", "📊 GRÁFICAS"])
 
 # ============================================
 # TAB 1: CHAT
@@ -147,27 +85,26 @@ with tab1:
     # Mostrar mensajes
     for msg in st.session_state.mensajes:
         if msg["rol"] == "usuario":
-            st.markdown(f"👤 **Tú:** {msg['texto']}")
+            st.markdown(f'<div style="background-color:#e3f2fd; padding:10px; border-radius:10px; margin:5px 0;">👤 <strong>Tú:</strong> {msg["texto"]}</div>', unsafe_allow_html=True)
         else:
-            st.markdown(f"🤖 **Asistente:** {msg['texto']}")
+            st.markdown(f'<div style="background-color:#f5f5f5; padding:10px; border-radius:10px; margin:5px 0;">🤖 <strong>Asistente:</strong> {msg["texto"]}</div>', unsafe_allow_html=True)
     
     # Input del usuario
-    pregunta = st.text_input("Escribe tu pregunta:", key="pregunta")
-    
-    col1, col2 = st.columns([1, 5])
+    col1, col2 = st.columns([5, 1])
     with col1:
+        pregunta = st.text_input("Escribe tu pregunta:", placeholder="Ej: ¿Cómo creo una gráfica? o Dame un consejo...", key="pregunta")
+    with col2:
         enviar = st.button("📤 Enviar", use_container_width=True)
     
     if enviar and pregunta:
         # Guardar pregunta
         st.session_state.mensajes.append({"rol": "usuario", "texto": pregunta})
         
-        # Obtener respuesta
-        with st.spinner("Pensando..."):
-            respuesta_texto = responder(pregunta)
+        # Respuesta simple (funciona sin API)
+        respuesta = f"✅ Recibí tu pregunta: '{pregunta}'\n\n📌 Puedes crear gráficas en la pestaña 'GRÁFICAS'.\n\n💡 Pronto podré responder con más inteligencia cuando conectes una API de IA."
         
         # Guardar respuesta
-        st.session_state.mensajes.append({"rol": "asistente", "texto": respuesta_texto})
+        st.session_state.mensajes.append({"rol": "asistente", "texto": respuesta})
         
         # Recargar
         st.rerun()
@@ -183,71 +120,70 @@ with tab2:
     with col1:
         st.subheader("1. Ingresa tus datos")
         
-        num_datos = st.number_input("¿Cuántos datos?", 2, 10, 4)
+        # Opción de datos
+        opcion_datos = st.radio("¿Cómo quieres los datos?", ["Usar ejemplo", "Ingresar manual"])
         
         datos = {}
-        for i in range(num_datos):
-            col_a, col_b = st.columns(2)
-            with col_a:
-                nombre = st.text_input(f"Nombre {i+1}", f"Item {i+1}", key=f"nom_{i}")
-            with col_b:
-                valor = st.number_input(f"Valor {i+1}", 0, 10000, 100, key=f"val_{i}")
-            datos[nombre] = valor
         
-        # Ejemplo rápido
-        if st.button("📋 Usar ejemplo"):
-            datos = {"Enero": 45000, "Febrero": 52000, "Marzo": 48000, "Abril": 61000}
-            st.rerun()
+        if opcion_datos == "Usar ejemplo":
+            datos = {
+                "Enero": 45000,
+                "Febrero": 52000,
+                "Marzo": 48000,
+                "Abril": 61000,
+                "Mayo": 58000
+            }
+            st.success("✅ Datos de ejemplo cargados:")
+            for k, v in datos.items():
+                st.write(f"• {k}: ${v:,.0f}")
+        
+        else:
+            num_datos = st.number_input("Número de categorías:", 2, 10, 4)
+            
+            for i in range(num_datos):
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    nombre = st.text_input(f"Nombre {i+1}", f"Item {i+1}", key=f"nom_{i}")
+                with col_b:
+                    valor = st.number_input(f"Valor {i+1}", 0, 100000, 1000, key=f"val_{i}")
+                datos[nombre] = valor
     
     with col2:
-        st.subheader("2. Configuración")
+        st.subheader("2. Configuración de la gráfica")
         
-        tipo = st.selectbox("Tipo de gráfica:", ["Barras", "Líneas", "Pastel"])
-        titulo = st.text_input("Título:", "Mi Gráfica")
+        tipo_grafica = st.selectbox(
+            "Tipo de gráfica:",
+            ["Barras", "Líneas", "Pastel"],
+            help="Barras: compara valores | Líneas: muestra tendencias | Pastel: muestra porcentajes"
+        )
         
-        if st.button("🎨 GENERAR GRÁFICA", use_container_width=True):
+        titulo_grafica = st.text_input("Título de la gráfica:", "Mi Gráfica")
+        
+        if st.button("🎨 GENERAR GRÁFICA", use_container_width=True, type="primary"):
             if datos:
-                imagen = crear_grafica(datos, tipo, titulo)
-                st.image(imagen, caption=titulo)
-                
-                # Descargar
-                st.download_button(
-                    label="💾 DESCARGAR PNG",
-                    data=imagen,
-                    file_name=f"{titulo}.png",
-                    mime="image/png"
-                )
+                with st.spinner("Generando gráfica..."):
+                    # Crear gráfica
+                    imagen = crear_grafica(datos, tipo_grafica, titulo_grafica)
+                    
+                    # Mostrar
+                    st.image(imagen, caption=titulo_grafica, use_container_width=True)
+                    
+                    # Botón para descargar
+                    st.download_button(
+                        label="💾 DESCARGAR COMO PNG",
+                        data=imagen,
+                        file_name=f"{titulo_grafica.replace(' ', '_')}.png",
+                        mime="image/png",
+                        use_container_width=True
+                    )
+                    
+                    st.success("✅ Gráfica generada exitosamente!")
             else:
-                st.warning("Ingresa datos primero")
-
-# ============================================
-# TAB 3: DRIVE
-# ============================================
-with tab3:
-    st.header("📁 Google Drive")
-    
-    if not st.session_state.drive_conectado:
-        st.warning("⚠️ Conecta Google Drive en la barra lateral")
-    else:
-        st.success("✅ Drive conectado")
-        
-        if st.button("📂 Ver mis archivos"):
-            with st.spinner("Cargando..."):
-                try:
-                    resultados = st.session_state.drive.files().list(
-                        pageSize=10,
-                        fields="files(id, name, modifiedTime)"
-                    ).execute()
-                    
-                    archivos = resultados.get('files', [])
-                    
-                    for archivo in archivos:
-                        st.write(f"📄 {archivo['name']}")
-                except Exception as e:
-                    st.error(f"Error: {e}")
+                st.warning("⚠️ Ingresa datos primero")
 
 # ============================================
 # PIE DE PÁGINA
 # ============================================
 st.markdown("---")
-st.caption("💡 Para usar: 1) Conecta Gemini (API Key) | 2) Conecta Drive | 3) Empieza a chatear")
+st.caption("💡 **Tips:** Esta app funciona en celular y computador. Crea gráficas con tus propios datos o usa los ejemplos.")
+st.caption("📱 Compatible con todos los dispositivos")
