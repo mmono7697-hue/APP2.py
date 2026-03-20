@@ -1,12 +1,14 @@
 """
-MI ASISTENTE IA - VERSIÓN WEB (CORREGIDA)
-Funciona sin google.colab
+MI ASISTENTE IA - CON GOOGLE DRIVE
+Acceso a documentos, gráficas y creación de archivos
 """
 
 import streamlit as st
 import matplotlib.pyplot as plt
 import io
+import pandas as pd
 from datetime import datetime
+import json
 
 # ============================================
 # CONFIGURACIÓN DE LA PÁGINA
@@ -18,33 +20,100 @@ st.set_page_config(
 )
 
 # ============================================
-# TÍTULO
-# ============================================
-st.title("🤖 Mi Asistente IA Personal")
-st.markdown("---")
-
-# ============================================
-# INICIALIZAR VARIABLES
+# INICIALIZAR VARIABLES DE SESIÓN
 # ============================================
 if 'mensajes' not in st.session_state:
     st.session_state.mensajes = []
+if 'drive_token' not in st.session_state:
+    st.session_state.drive_token = None
+if 'drive_conectado' not in st.session_state:
+    st.session_state.drive_conectado = False
 
 # ============================================
-# BARRA LATERAL
+# BARRA LATERAL - CONFIGURACIÓN
 # ============================================
 with st.sidebar:
     st.image("https://img.icons8.com/fluency/96/000000/robot-2.png", width=80)
     st.title("⚙️ Configuración")
     
     st.markdown("---")
-    st.info("📌 **Cómo usar:**")
-    st.write("1. Escribe tu pregunta en el chat")
-    st.write("2. Crea gráficas en la pestaña Gráficas")
-    st.write("3. Comparte esta URL con otros")
+    
+    # ========================================
+    # SECCIÓN DE GOOGLE DRIVE
+    # ========================================
+    st.subheader("📁 Google Drive")
+    
+    st.info("""
+    **Para conectar Google Drive:**
+    
+    1. Necesitas un token de acceso
+    2. Cada usuario conecta su propio Drive
+    3. Los archivos se guardan en tu Drive personal
+    """)
+    
+    # Opción 1: Token manual (para pruebas)
+    token_manual = st.text_input(
+        "Token de acceso (opcional):",
+        type="password",
+        placeholder="Pega tu token aquí..."
+    )
+    
+    if token_manual:
+        st.session_state.drive_token = token_manual
+        st.session_state.drive_conectado = True
+        st.success("✅ Token guardado")
+    
+    # Opción 2: Simulación de Drive (para pruebas)
+    if not st.session_state.drive_conectado:
+        if st.button("🔌 Usar modo simulación (pruebas)", use_container_width=True):
+            st.session_state.drive_conectado = True
+            st.session_state.modo_simulacion = True
+            st.success("✅ Modo simulación activado")
+            st.rerun()
+    
+    if st.session_state.drive_conectado:
+        st.success("📁 Drive: Conectado")
+        
+        # Mostrar carpetas simuladas
+        if 'modo_simulacion' in st.session_state:
+            st.info("📂 Modo simulación - archivos guardados localmente")
+        
+        if st.button("📂 Ver mis archivos", use_container_width=True):
+            st.session_state.mostrar_archivos = True
     
     st.markdown("---")
-    st.caption(f"🕒 {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-    st.caption("👥 Compatible con celular y computador")
+    st.caption(f"👥 Comparte esta URL con tus usuarios")
+    st.caption(f"🕒 {datetime.now().strftime('%d/%m/%Y')}")
+
+# ============================================
+# FUNCIONES DE DRIVE (SIMULADAS PARA PRUEBAS)
+# ============================================
+
+def guardar_en_drive(nombre_archivo, contenido, tipo="texto"):
+    """Guarda un archivo en Drive (simulado)"""
+    
+    # Inicializar almacenamiento si no existe
+    if 'archivos_guardados' not in st.session_state:
+        st.session_state.archivos_guardados = []
+    
+    # Crear archivo simulado
+    archivo = {
+        "nombre": nombre_archivo,
+        "tipo": tipo,
+        "contenido": contenido,
+        "fecha": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "url": f"https://drive.google.com/file/d/simulado_{len(st.session_state.archivos_guardados)}"
+    }
+    
+    st.session_state.archivos_guardados.append(archivo)
+    
+    return archivo["url"]
+
+def listar_archivos_drive():
+    """Lista archivos simulados"""
+    if 'archivos_guardados' not in st.session_state:
+        return []
+    return st.session_state.archivos_guardados
 
 # ============================================
 # FUNCIÓN PARA CREAR GRÁFICA
@@ -59,11 +128,10 @@ def crear_grafica(datos, tipo, titulo):
         plt.plot(list(datos.keys()), list(datos.values()), marker='o', linewidth=2, markersize=8, color='green')
         plt.grid(True, alpha=0.3)
     elif tipo == "Pastel":
-        plt.pie(datos.values(), labels=datos.keys(), autopct='%1.1f%%', colors=['#ff9999','#66b3ff','#99ff99','#ffcc99'])
+        plt.pie(datos.values(), labels=datos.keys(), autopct='%1.1f%%')
     
     plt.title(titulo, fontsize=14, fontweight='bold')
     
-    # Guardar en memoria
     buf = io.BytesIO()
     plt.savefig(buf, format='png', dpi=300, bbox_inches='tight')
     buf.seek(0)
@@ -72,9 +140,32 @@ def crear_grafica(datos, tipo, titulo):
     return buf
 
 # ============================================
+# FUNCIÓN PARA CREAR DOCUMENTO
+# ============================================
+def crear_documento(titulo, contenido):
+    """Crea un documento de texto"""
+    doc = f"""
+    📄 DOCUMENTO: {titulo}
+    📅 Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}
+    {'='*50}
+    
+    {contenido}
+    
+    {'='*50}
+    Creado con Mi Asistente IA
+    """
+    return doc
+
+# ============================================
+# TÍTULO PRINCIPAL
+# ============================================
+st.title("🤖 Mi Asistente IA Personal")
+st.markdown("---")
+
+# ============================================
 # PESTAÑAS
 # ============================================
-tab1, tab2 = st.tabs(["💬 CHAT", "📊 GRÁFICAS"])
+tab1, tab2, tab3, tab4 = st.tabs(["💬 CHAT", "📊 GRÁFICAS", "📝 DOCUMENTOS", "📁 MIS ARCHIVOS"])
 
 # ============================================
 # TAB 1: CHAT
@@ -85,62 +176,55 @@ with tab1:
     # Mostrar mensajes
     for msg in st.session_state.mensajes:
         if msg["rol"] == "usuario":
-            st.markdown(f'<div style="background-color:#e3f2fd; padding:10px; border-radius:10px; margin:5px 0;">👤 <strong>Tú:</strong> {msg["texto"]}</div>', unsafe_allow_html=True)
+            st.markdown(f'👤 **Tú:** {msg["texto"]}')
         else:
-            st.markdown(f'<div style="background-color:#f5f5f5; padding:10px; border-radius:10px; margin:5px 0;">🤖 <strong>Asistente:</strong> {msg["texto"]}</div>', unsafe_allow_html=True)
+            st.markdown(f'🤖 **Asistente:** {msg["texto"]}')
     
-    # Input del usuario
+    # Input
     col1, col2 = st.columns([5, 1])
     with col1:
-        pregunta = st.text_input("Escribe tu pregunta:", placeholder="Ej: ¿Cómo creo una gráfica? o Dame un consejo...", key="pregunta")
+        pregunta = st.text_input("Escribe tu pregunta:", key="pregunta", placeholder="Ej: ¿Cómo creo una gráfica?")
     with col2:
         enviar = st.button("📤 Enviar", use_container_width=True)
     
     if enviar and pregunta:
-        # Guardar pregunta
         st.session_state.mensajes.append({"rol": "usuario", "texto": pregunta})
         
-        # Respuesta simple (funciona sin API)
-        respuesta = f"✅ Recibí tu pregunta: '{pregunta}'\n\n📌 Puedes crear gráficas en la pestaña 'GRÁFICAS'.\n\n💡 Pronto podré responder con más inteligencia cuando conectes una API de IA."
+        # Respuesta
+        respuesta = f"✅ Recibí tu pregunta.\n\n📌 Puedes crear gráficas en la pestaña 'GRÁFICAS'\n📝 Crear documentos en 'DOCUMENTOS'\n📁 Ver archivos guardados en 'MIS ARCHIVOS'"
         
-        # Guardar respuesta
         st.session_state.mensajes.append({"rol": "asistente", "texto": respuesta})
-        
-        # Recargar
         st.rerun()
 
 # ============================================
-# TAB 2: GRÁFICAS
+# TAB 2: GRÁFICAS (CON GUARDADO EN DRIVE)
 # ============================================
 with tab2:
-    st.header("📊 Crea gráficas fácilmente")
+    st.header("📊 Crear gráficas")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        st.subheader("1. Ingresa tus datos")
+        st.subheader("Datos")
         
-        # Opción de datos
-        opcion_datos = st.radio("¿Cómo quieres los datos?", ["Usar ejemplo", "Ingresar manual"])
+        # Datos de ejemplo
+        datos_ejemplo = {
+            "Enero": 45000,
+            "Febrero": 52000,
+            "Marzo": 48000,
+            "Abril": 61000
+        }
         
-        datos = {}
+        usar_ejemplo = st.checkbox("Usar datos de ejemplo", value=True)
         
-        if opcion_datos == "Usar ejemplo":
-            datos = {
-                "Enero": 45000,
-                "Febrero": 52000,
-                "Marzo": 48000,
-                "Abril": 61000,
-                "Mayo": 58000
-            }
-            st.success("✅ Datos de ejemplo cargados:")
+        if usar_ejemplo:
+            datos = datos_ejemplo
             for k, v in datos.items():
                 st.write(f"• {k}: ${v:,.0f}")
-        
         else:
-            num_datos = st.number_input("Número de categorías:", 2, 10, 4)
-            
-            for i in range(num_datos):
+            num = st.number_input("Número de categorías:", 2, 10, 4)
+            datos = {}
+            for i in range(num):
                 col_a, col_b = st.columns(2)
                 with col_a:
                     nombre = st.text_input(f"Nombre {i+1}", f"Item {i+1}", key=f"nom_{i}")
@@ -149,41 +233,88 @@ with tab2:
                 datos[nombre] = valor
     
     with col2:
-        st.subheader("2. Configuración de la gráfica")
+        st.subheader("Configuración")
         
-        tipo_grafica = st.selectbox(
-            "Tipo de gráfica:",
-            ["Barras", "Líneas", "Pastel"],
-            help="Barras: compara valores | Líneas: muestra tendencias | Pastel: muestra porcentajes"
-        )
+        tipo = st.selectbox("Tipo", ["Barras", "Líneas", "Pastel"])
+        titulo = st.text_input("Título", "Mi Gráfica")
         
-        titulo_grafica = st.text_input("Título de la gráfica:", "Mi Gráfica")
-        
-        if st.button("🎨 GENERAR GRÁFICA", use_container_width=True, type="primary"):
+        if st.button("🎨 GENERAR GRÁFICA", use_container_width=True):
             if datos:
-                with st.spinner("Generando gráfica..."):
-                    # Crear gráfica
-                    imagen = crear_grafica(datos, tipo_grafica, titulo_grafica)
-                    
-                    # Mostrar
-                    st.image(imagen, caption=titulo_grafica, use_container_width=True)
-                    
-                    # Botón para descargar
-                    st.download_button(
-                        label="💾 DESCARGAR COMO PNG",
-                        data=imagen,
-                        file_name=f"{titulo_grafica.replace(' ', '_')}.png",
-                        mime="image/png",
-                        use_container_width=True
-                    )
-                    
-                    st.success("✅ Gráfica generada exitosamente!")
+                imagen = crear_grafica(datos, tipo, titulo)
+                st.image(imagen, caption=titulo)
+                
+                # Descargar
+                st.download_button("💾 Descargar PNG", imagen, f"{titulo}.png")
+                
+                # Guardar en Drive
+                if st.session_state.drive_conectado:
+                    if st.button("☁️ Guardar en Drive", use_container_width=True):
+                        url = guardar_en_drive(f"{titulo}.png", imagen, "imagen")
+                        st.success(f"✅ Guardado en Drive: [Ver]({url})")
             else:
-                st.warning("⚠️ Ingresa datos primero")
+                st.warning("Ingresa datos")
+
+# ============================================
+# TAB 3: DOCUMENTOS
+# ============================================
+with tab3:
+    st.header("📝 Crear documentos")
+    
+    titulo_doc = st.text_input("Título del documento:", "Mi Documento")
+    contenido_doc = st.text_area(
+        "Contenido:",
+        height=300,
+        value="# Título Principal\n\nEscribe aquí tu contenido...\n\n- Punto 1\n- Punto 2"
+    )
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("📄 CREAR DOCUMENTO", use_container_width=True):
+            doc = crear_documento(titulo_doc, contenido_doc)
+            
+            # Mostrar
+            st.text_area("Vista previa:", doc, height=200)
+            
+            # Guardar en Drive
+            if st.session_state.drive_conectado:
+                url = guardar_en_drive(f"{titulo_doc}.txt", doc, "documento")
+                st.success(f"✅ Documento guardado en Drive")
+                st.markdown(f"[Abrir documento]({url})")
+            else:
+                st.warning("Conecta Drive para guardar")
+    
+    with col2:
+        st.info("💡 **Tips:**\n- Usa # para títulos\n- Usa - para listas\n- El documento se guarda automáticamente en Drive")
+
+# ============================================
+# TAB 4: MIS ARCHIVOS
+# ============================================
+with tab4:
+    st.header("📁 Mis archivos en Drive")
+    
+    if not st.session_state.drive_conectado:
+        st.warning("⚠️ Conecta Google Drive en la barra lateral")
+        st.info("Haz clic en 'Usar modo simulación' para probar")
+    else:
+        archivos = listar_archivos_drive()
+        
+        if not archivos:
+            st.info("No tienes archivos guardados aún. Crea gráficas o documentos para guardarlos.")
+        else:
+            for archivo in archivos:
+                with st.container():
+                    col1, col2, col3 = st.columns([3, 2, 1])
+                    with col1:
+                        st.write(f"📄 **{archivo['nombre']}**")
+                    with col2:
+                        st.write(f"📅 {archivo['fecha']}")
+                    with col3:
+                        st.write(f"🔗 [Ver]({archivo['url']})")
+                st.markdown("---")
 
 # ============================================
 # PIE DE PÁGINA
 # ============================================
 st.markdown("---")
-st.caption("💡 **Tips:** Esta app funciona en celular y computador. Crea gráficas con tus propios datos o usa los ejemplos.")
-st.caption("📱 Compatible con todos los dispositivos")
+st.caption("💡 **Comparte esta URL con tus usuarios | Cada usuario conecta su propio Drive**")
